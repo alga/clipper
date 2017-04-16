@@ -8,6 +8,9 @@ setup(
     description="Automatically cut videos out of footage",
     license="MIT",
     packages=['clipper'],
+    install_requires=[
+        'moviepy',
+    ],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
