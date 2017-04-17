@@ -10,10 +10,14 @@ setup(
     packages=['clipper'],
     install_requires=[
         'moviepy',
+        'pytube',
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
         "License :: OSI Approved :: MIT License",
     ],
+    entry_points={
+        'console_scripts': ['clipper = clipper.clipper:main']
+    },
 )
