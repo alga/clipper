@@ -18,12 +18,25 @@ def collage(files, period=2.0, length=15.0, seed="amaze me"):
     rand = random.Random(seed)
     print("Done")
 
+    offsets = []
+    offset = 0
+    for vid in vids:
+        offsets.append(offset)
+        offset += vid.duration
+    footage_length = offset
+
     subclips = []
     for i in range(int(length / period)):
         vid = rand.choice(vids)
-        start = rand.uniform(0, vid.duration - period)
-        print("Cutting {} at {:.2f}".format(vid.filename, start))
-        subclips.append(vid.subclip(start, start + period))
+        start = rand.uniform(0, footage_length - period)
+        vid_index = offsets.index(max(o for o in offsets if o <= start))
+        vid = vids[vid_index]
+        vid_start = start - offsets[vid_index]
+        print("Cutting {} at {:.2f}".format(vid.filename, vid_start))
+        subclips.append((start, vid.subclip(vid_start, vid_start + period)))
+
+    subclips.sort()
+    subclips = [clip for (start, clip) in subclips]
 
     print("Concatenating")
     total = concatenate_videoclips(subclips)
@@ -72,7 +85,7 @@ def main():
                         help='The name of the output file')
     parser.add_argument('--seed', default="amaze me", help='Random seed')
     parser.add_argument('videos', nargs='+', help='Video files to process')
-    args = parser.parse_args()
+    options = parser.parse_args()
 
     run(options)
 
