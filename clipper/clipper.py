@@ -29,6 +29,7 @@ def collage(files, period=2.0, length=15.0, seed="amaze me"):
     return total
 
 def get_audio(youtube_id="9pqa1Y0pSMg"):
+
     filepath = '/tmp/{}.mp4'.format(youtube_id)
     if not os.path.exists(filepath):
         yt = YouTube("http://www.youtube.com/watch?v={}".format(youtube_id))
@@ -36,6 +37,7 @@ def get_audio(youtube_id="9pqa1Y0pSMg"):
         video = yt.get('mp4', '720p')
         video.download('/tmp')
     return AudioFileClip(filepath)
+
 
 def main():
     audio = get_audio()
