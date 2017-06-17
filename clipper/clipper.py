@@ -26,12 +26,20 @@ def collage(files, period=2.0, length=15.0, seed="amaze me"):
     footage_length = offset
 
     subclips = []
+    starts = []
     for i in range(int(length / period)):
-        vid = rand.choice(vids)
-        start = rand.uniform(0, footage_length - period)
-        vid_index = offsets.index(max(o for o in offsets if o <= start))
-        vid = vids[vid_index]
-        vid_start = start - offsets[vid_index]
+        while True:
+            start = rand.uniform(0, footage_length - period)
+            vid_index = offsets.index(max(o for o in offsets if o <= start))
+            vid = vids[vid_index]
+            vid_start = start - offsets[vid_index]
+            # Make sure the clip does not span past the end of the clip
+            if vid_start + period <= vid.duration:
+                # Make sure clips don't overlap
+                distances = [abs(s-start) for s in starts]
+                if not distances or min(distances) > period:
+                    break
+        starts.append(start)
         print("Cutting {} at {:.2f}".format(vid.filename, vid_start))
         subclips.append((start, vid.subclip(vid_start, vid_start + period)))
 
