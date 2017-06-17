@@ -1,4 +1,10 @@
+import os
 from setuptools import setup
+
+def read(fn):
+    with open(os.path.join(os.path.dirname(__file__), fn)) as f:
+        return f.read()
+
 
 setup(
     name="clipper",
@@ -6,6 +12,7 @@ setup(
     author="Albertas Agejevas",
     author_email="albertas.agejevas@gmail.com",
     description="Automatically cut videos out of footage",
+    long_description=read("README.rst"),
     license="MIT",
     package_dir={'': 'src'},
     packages=[''],
