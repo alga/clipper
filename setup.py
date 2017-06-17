@@ -7,7 +7,8 @@ setup(
     author_email="albertas.agejevas@gmail.com",
     description="Automatically cut videos out of footage",
     license="MIT",
-    packages=['clipper'],
+    package_dir={'': 'src'},
+    packages=[''],
     install_requires=[
         'moviepy',
         'pytube',
@@ -18,6 +19,6 @@ setup(
         "License :: OSI Approved :: MIT License",
     ],
     entry_points={
-        'console_scripts': ['clipper = clipper.clipper:main']
+        'console_scripts': ['clipper = clipper:main']
     },
 )
