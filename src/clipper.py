@@ -12,7 +12,8 @@ from pytube import YouTube
 from moviepy.audio.tools.cuts import find_audio_period
 
 
-def collage(files, period=2.0, length=15.0, seed="amaze me"):
+def collage(files, period=2.0, length=15.0, seed="amaze me",
+            shuffle=False):
     print("Loading...")
     vids = [VideoFileClip(fn, audio=False) for fn in files]
     rand = random.Random(seed)
@@ -43,7 +44,9 @@ def collage(files, period=2.0, length=15.0, seed="amaze me"):
         print("Cutting {} at {:.2f}".format(vid.filename, vid_start))
         subclips.append((start, vid.subclip(vid_start, vid_start + period)))
 
-    subclips.sort()
+    if not shuffle:
+        subclips.sort()
+
     subclips = [clip for (start, clip) in subclips]
 
     print("Concatenating")
@@ -68,7 +71,7 @@ def run(options):
     print("Found audio period of {:.2f}".format(period))
     result = collage(
         options.videos, period * options.multiplier, options.length,
-        options.seed)
+        options.seed, shuffle=options.shuffle)
     result = result.set_audio(audio.subclip(0, options.length).audio_fadeout(2))
     print("Writing")
     result.write_videofile(
@@ -92,6 +95,7 @@ def main():
                         default="5000k",
                         help='The name of the output file')
     parser.add_argument('--seed', default="amaze me", help='Random seed')
+    parser.add_argument('--shuffle', action='store_true', help='Shuffle clips')
     parser.add_argument('videos', nargs='+', help='Video files to process')
     options = parser.parse_args()
 
