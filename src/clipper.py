@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 import random
-import sys
+import glob
 import argparse
 
 from moviepy.editor import VideoFileClip, concatenate_videoclips
@@ -55,13 +55,14 @@ def collage(files, period=2.0, length=15.0, seed="amaze me",
 
 
 def get_audio(youtube_id):
-    filepath = '/tmp/{}.mp4'.format(youtube_id)
+    matches = glob.glob(f'/tmp/{youtube_id}.*')
+    filepath = matches[0] if matches else None
     if not os.path.exists(filepath):
         yt = YouTube("http://www.youtube.com/watch?v={}".format(youtube_id))
-        yt.set_filename(youtube_id)
-        print(yt.videos)
-        video = yt.filter('mp4')[-1]
-        video.download('/tmp')
+        print(yt.streams.filter(only_audio=True).all())
+        video = yt.streams.filter(only_audio=True).first()
+        video.download('/tmp', youtube_id)
+        filepath = glob.glob(f'/tmp/{youtube_id}.*')[0]
     return AudioFileClip(filepath)
 
 
