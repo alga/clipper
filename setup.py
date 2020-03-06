@@ -8,7 +8,7 @@ def read(fn):
 
 setup(
     name="clipper",
-    version="0.1dev0",
+    version="0.1dev1",
     author="Albertas Agejevas",
     author_email="albertas.agejevas@gmail.com",
     description="Automatically cut videos out of footage",
@@ -18,7 +18,7 @@ setup(
     packages=[''],
     install_requires=[
         'moviepy',
-        'pytube',
+        'pytube3',
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
