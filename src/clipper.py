@@ -70,6 +70,8 @@ def run(options):
     audio = get_audio(options.audio)
     period = find_audio_period(audio)
     print("Found audio period of {:.2f}".format(period))
+    if options.length is None:
+        options.length = audio.duration
     result = collage(
         options.videos, period * options.multiplier, options.length,
         options.seed, shuffle=options.shuffle)
