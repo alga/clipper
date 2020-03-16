@@ -57,7 +57,7 @@ def collage(files, period=2.0, length=15.0, seed="amaze me",
 def get_audio(youtube_id):
     matches = glob.glob(f'/tmp/{youtube_id}.*')
     filepath = matches[0] if matches else None
-    if not os.path.exists(filepath):
+    if filepath is None or not os.path.exists(filepath):
         yt = YouTube("http://www.youtube.com/watch?v={}".format(youtube_id))
         print(yt.streams.filter(only_audio=True).all())
         video = yt.streams.filter(only_audio=True).first()
