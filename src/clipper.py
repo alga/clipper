@@ -67,7 +67,10 @@ def get_audio(youtube_id):
 
 
 def run(options):
-    audio = get_audio(options.audio)
+    if options.youtube_audio:
+        audio = get_audio(options.youtube_audio)
+    else:
+        audio = AudioFileClip(options.audio_path)
     period = find_audio_period(audio)
     print("Found audio period of {:.2f}".format(period))
     if options.length is None:
@@ -90,10 +93,10 @@ def main():
                         help='Length of the resulting video in seconds')
     parser.add_argument('--multiplier', type=float, default=1.0,
                         help='How often to change the video')
-    parser.add_argument('--audio',
-                        default="sESVVM7FiLo",
-                        #default="ZpHC2KFJn-o",
-                        help='The youtube video id to use the sound from')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--youtube-audio',
+                       help='The youtube video id to use the sound from.')
+    group.add_argument('--audio-path', help='File path of the audio track.')
     parser.add_argument('--output',
                         default="result.mp4",
                         help='The name of the output file')

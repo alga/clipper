@@ -9,7 +9,7 @@ Here's an example of output: https://youtu.be/BMyqhdsilVo
 
 The invocation to to get this video was::
 
-    bin/clipper --audio aiumJ_nDkhs \
+    bin/clipper --youtube-audio aiumJ_nDkhs \
                --length 227 --bitrate 5000k \
                --output sierranevada.mp4 \
                --multiplier 4 --seed sierranevada \
