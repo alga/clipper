@@ -12,8 +12,7 @@ from moviepy.audio.tools.cuts import find_audio_period
 from moviepy.video.fx import all as vfx
 
 
-def collage(files, period=2.0, length=15.0, seed="amaze me",
-            shuffle=False):
+def collage(files, period=2.0, length=15.0, seed="amaze me", shuffle=False):
     print("Loading...")
     vids = [VideoFileClip(fn, audio=False) for fn in files]
     rand = random.Random(seed)
