@@ -8,8 +8,8 @@ from moviepy.editor import VideoFileClip, concatenate_videoclips
 from moviepy.editor import AudioFileClip
 from pytube import YouTube
 
-#from moviepy.video.tools.cuts import find_video_period
 from moviepy.audio.tools.cuts import find_audio_period
+from moviepy.video.fx import all as vfx
 
 
 def collage(files, period=2.0, length=15.0, seed="amaze me",
@@ -76,6 +76,9 @@ def run(options):
         options.videos, period * options.multiplier, options.length,
         options.seed, shuffle=options.shuffle)
     result = result.set_audio(audio.subclip(0, options.length).audio_fadeout(2))
+    if options.flip:
+        print("Rotating")
+        result = result.fx(vfx.rotate, 180)
     print("Writing")
     result.write_videofile(
         options.output, fps=30, bitrate=options.bitrate, codec='libx264')
@@ -99,6 +102,8 @@ def main():
                         help='The name of the output file')
     parser.add_argument('--seed', default="amaze me", help='Random seed')
     parser.add_argument('--shuffle', action='store_true', help='Shuffle clips')
+    parser.add_argument('--flip', action='store_true',
+                        help='Rotate by 180 degrees')
     parser.add_argument('videos', nargs='+', help='Video files to process')
     options = parser.parse_args()
 
