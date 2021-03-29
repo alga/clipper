@@ -19,6 +19,7 @@ setup(
     install_requires=[
         'moviepy',
         'pytube3',
+        'Pygame',
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

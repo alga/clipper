@@ -82,6 +82,9 @@ def run(options):
     if options.flip:
         print("Rotating")
         result = result.fx(vfx.rotate, 180)
+    if options.preview:
+        result.preview(fps=10)
+        return
     print("Writing")
     result.write_videofile(
         options.output, fps=30, bitrate=options.bitrate, codec='libx264')
@@ -107,6 +110,8 @@ def main():
     parser.add_argument('--shuffle', action='store_true', help='Shuffle clips')
     parser.add_argument('--flip', action='store_true',
                         help='Rotate by 180 degrees')
+    parser.add_argument('--preview', action='store_true',
+                        help='Show video instead of rendering it.')
     parser.add_argument('videos', nargs='+', help='Video files to process')
     options = parser.parse_args()
 
