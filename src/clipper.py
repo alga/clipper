@@ -3,6 +3,8 @@ import os
 import random
 import glob
 import argparse
+from dataclasses import dataclass
+
 
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 from moviepy.editor import AudioFileClip
@@ -11,45 +13,71 @@ from pytube import YouTube
 from moviepy.audio.tools.cuts import find_audio_period
 from moviepy.video.fx import all as vfx
 
+@dataclass(order=True)
+class VidData:
+    start: float
+    filename: str
+    duration: float
+    vid: VideoFileClip
+
+
+@dataclass(order=True)
+class ClipInfo:
+    start: float          # timecode of the start of the clip in the total footage
+    skip: float           # start of the subclip relative to clip
+    filename: str
+    vid: VideoFileClip
+    duration: float
+
 
 def collage(files, period=2.0, length=15.0, seed="amaze me", shuffle=False):
-    print("Loading...")
-    vids = [VideoFileClip(fn, audio=False) for fn in files]
-    rand = random.Random(seed)
-    print("Done")
 
-    offsets = []
+    print("Loading...")
+    footage = []
     offset = 0
-    for vid in vids:
-        offsets.append(offset)
+    for fn in files:
+        print("\r", fn, end="")
+        vid = VideoFileClip(fn, audio=False)
+        footage.append(VidData(offset, fn, vid.duration, vid))
         offset += vid.duration
     footage_length = offset
+    print("\nDone")
+
+    rand = random.Random(seed)
 
     subclips = []
     starts = []
     for i in range(int(length / period)):
         while True:
             start = rand.uniform(0, footage_length - period)
-            vid_index = offsets.index(max(o for o in offsets if o <= start))
-            vid = vids[vid_index]
-            vid_start = start - offsets[vid_index]
+            vid = max(v for v in footage if v.start <= start)
+            vid_index = footage.index(vid)
+            skip = start - vid.start
             # Make sure the clip does not span past the end of the clip
-            if vid_start + period <= vid.duration:
+            if skip + period <= vid.duration:
                 # Make sure clips don't overlap
                 distances = [abs(s-start) for s in starts]
                 if not distances or min(distances) > period:
                     break
         starts.append(start)
-        print("Cutting {} at {:.2f}".format(vid.filename, vid_start))
-        subclips.append((start, vid.subclip(vid_start, vid_start + period)))
+        subclips.append(ClipInfo(start, skip, vid.filename, vid.vid, period))
 
     if not shuffle:
         subclips.sort()
 
-    subclips = [clip for (start, clip) in subclips]
+    print("Cutting")
 
+    def feed(clipinfos):
+        for clip in clipinfos:
+            print(f"\r{clip.filename} at {clip.skip}            ", end="")
+            yield clip
+
+    cut = [
+        clip.vid.subclip(clip.skip, clip.skip + clip.duration)
+        for clip in feed(subclips)
+    ]
     print("Concatenating")
-    total = concatenate_videoclips(subclips)
+    total = concatenate_videoclips(cut)
     return total
 
 
@@ -71,7 +99,7 @@ def run(options):
     else:
         audio = AudioFileClip(options.audio_path)
     period = find_audio_period(audio)
-    print("Found audio period of {:.2f}".format(period))
+    print("Found audio period of {:.4f}".format(period))
     if options.length is None:
         options.length = audio.duration
     result = collage(
@@ -86,7 +114,7 @@ def run(options):
         return
     print("Writing")
     result.write_videofile(
-        options.output, fps=30, bitrate=options.bitrate, codec='libx264')
+        options.output, fps=30, bitrate=options.bitrate, codec='hevc')
 
 
 def main():
@@ -104,7 +132,7 @@ def main():
                         help='The name of the output file')
     parser.add_argument('--bitrate',
                         default="5000k",
-                        help='The name of the output file')
+                        help='The output bitrate')
     parser.add_argument('--seed', default="amaze me", help='Random seed')
     parser.add_argument('--shuffle', action='store_true', help='Shuffle clips')
     parser.add_argument('--flip', action='store_true',
