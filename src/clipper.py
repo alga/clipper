@@ -65,25 +65,42 @@ def collage(files, bitrate, period=2.0, length=15.0, seed="amaze me", shuffle=Fa
         subclips.sort()
 
     print("Cutting")
+    clips = []
+    vids = []
+    batches = []
+    batch = 0
+    LIMIT = 20
+
     for clip in subclips:
         print(f"Cutting {clip.filename} at {clip.skip}")
-        with VideoFileClip(clip.filename, audio=False) as vid:
-            sub = vid.subclip(clip.skip, clip.skip + clip.duration)
-            sub.write_videofile(
-                f"temp{clip.start:07.2f}.mp4",
+        vid = VideoFileClip(clip.filename, audio=False)
+        vids.append(vid)
+        sub = vid.subclip(clip.skip, clip.skip + clip.duration)
+        clips.append(sub)
+        if len(clips) >= LIMIT or clip is subclips[-1]:
+            batchfile = f"temp{batch:04d}.mp4"
+            print(f"Writing {batchfile}", flush=True)
+            batchvid = concatenate_videoclips(clips)
+            batchvid.write_videofile(
+                batchfile,
                 fps=30,
                 bitrate=bitrate,
                 codec="hevc",
                 logger=None,
             )
+            batches.append(batchfile)
+            batch += 1
+            clips = []
+            for vid in vids:
+                vid.close()
+            vids = []
 
-    print("\nConcatenating")
+    print("Concatenating")
     def feed(subclips):
-        for clip in subclips:
-            fn = f"temp{clip.start:07.2f}.mp4"
-            print(fn)
+        for fn in subclips:
+            print(fn, flush=True)
             yield fn
-    cut = [VideoFileClip(clip, audio=False) for clip in feed(subclips)]
+    cut = [VideoFileClip(clip, audio=False) for clip in feed(batches)]
     total = concatenate_videoclips(cut)
     return total
 
