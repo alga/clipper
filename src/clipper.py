@@ -46,10 +46,32 @@ def collage(files, bitrate, period=2.0, length=15.0, seed="amaze me", shuffle=Fa
 
     subclips = []
     starts = []
+
+    def time_random():
+        """A random poke into the "timeline" of the footage.
+
+        Favors long videos.  Results in clusters sometimes.
+        """
+        start = rand.uniform(0, footage_length - period)
+        vid = max(v for v in footage if v.start <= start)
+        return start, vid
+
+    bag = footage[:]
+    def round_robin(bag):
+        """Pick videos from a bag and show random clips from them."""
+        if not bag:
+            bag += footage
+        vid = rand.choice(bag)
+        bag.remove(vid)
+        start = rand.uniform(vid.start, vid.start + vid.duration - period)
+        return start, vid
+
     for i in range(int(length / period)):
         while True:
-            start = rand.uniform(0, footage_length - period)
-            vid = max(v for v in footage if v.start <= start)
+            # Random shots into the timeline result in weird clusters and in many clips
+            # not being used at all.  Let's try to combine poking a random poke into
+            # each clip with poking into the timeline.
+            start, vid = round_robin(bag) if bag else time_random()
             vid_index = footage.index(vid)
             skip = start - vid.start
             # Make sure the clip does not span past the end of the clip
