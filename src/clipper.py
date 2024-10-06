@@ -107,7 +107,7 @@ def collage(files, bitrate, period=2.0, length=15.0, seed="amaze me", shuffle=Fa
                 batchfile,
                 fps=30,
                 bitrate=bitrate,
-                codec="hevc",
+                codec="libx264",
                 logger=None,
             )
             batches.append(batchfile)
@@ -165,7 +165,7 @@ def run(options):
         return
     print("Writing")
     result.write_videofile(
-        options.output, fps=30, bitrate=options.bitrate, codec="hevc"
+        options.output, fps=30, bitrate=options.bitrate, codec="libx264"
     )
 
 
