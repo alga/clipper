@@ -14,3 +14,11 @@ The invocation to to get this video was::
                --output sierranevada.mp4 \
                --multiplier 4 --seed sierranevada \
                ~/Video/Sierra\ Nevada\ bike/YDXJ*.mp4
+
+Also, there is an option to output a Shotcut project file
+that can be edited and rendered there::
+
+    bin/clipper --shotcut --output myproject.mlt \
+                --audio-path ~/Music/music.mp3 \
+                --seed Magic \
+                ~/Videos/GoPro/*.MP4
