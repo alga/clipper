@@ -20,6 +20,8 @@ import hashlib
 import datetime
 
 
+metadata_cache = {}
+
 def get_video_metadata(video_path):
     """
     Get metadata (duration, resolution, frame rate) from a video file using ffprobe.
@@ -30,6 +32,10 @@ def get_video_metadata(video_path):
     Returns:
         dict: Dictionary containing duration, width, height, and frame_rate
     """
+    global metadata_cache
+    if video_path in metadata_cache:
+        return metadata_cache[video_path].copy()
+
     if not os.path.exists(video_path):
         print(f"Error: File not found - {video_path}")
         return None
@@ -112,6 +118,7 @@ def get_video_metadata(video_path):
                 if "codec_name" in stream:
                     metadata["audio_codec"] = stream["codec_name"]
 
+        metadata_cache[video_path] = metadata.copy()
         return metadata
 
     except subprocess.CalledProcessError as e:
