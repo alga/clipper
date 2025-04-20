@@ -234,7 +234,7 @@ def generate_mlt_file(video_files, clips, output_file="output.mlt"):
 
         # Create chain element for main_bin
         chain_bin = ET.SubElement(
-            mlt, "chain", {"id": f"chain{i*2}", "out": duration_tc}
+            mlt, "chain", {"id": f"chain{i}", "out": duration_tc}
         )
 
         # Add essential properties
@@ -331,7 +331,7 @@ def generate_mlt_file(video_files, clips, output_file="output.mlt"):
         # Store for later reference
         chain_elements.append(
             {
-                "id": f"chain{i*2}",
+                "id": f"chain{i}",
                 "filename": filename,
                 "path": video_path,
                 "hash": file_hash,
@@ -389,13 +389,16 @@ def generate_mlt_file(video_files, clips, output_file="output.mlt"):
 
     # Create chain elements for playlist clips
     clip_chains = []
-    for i, chain in enumerate(chain_elements):
+    for j, (filename, start, duration) in enumerate(clips):
+
+        chain = [ce for ce in chain_elements if ce["filename"].endswith(filename)][0]
+
         # Create chain element for playlist
         chain_playlist = ET.SubElement(
             mlt,
             "chain",
             {
-                "id": f"chain{i*2+1}",
+                "id": f"chain{i+j+1}",
                 "out": time_to_timecode(video_metadata[chain["filename"]]["duration"]),
             },
         )
@@ -441,7 +444,7 @@ def generate_mlt_file(video_files, clips, output_file="output.mlt"):
             chain["filename"]
         )
 
-        clip_chains.append({"id": f"chain{i*2+1}", "filename": chain["filename"]})
+        clip_chains.append({"id": f"chain{i+j+1}", "filename": chain["filename"]})
 
     # Create main playlist
     playlist = ET.SubElement(mlt, "playlist", {"id": "playlist0"})
