@@ -13,6 +13,8 @@ from pytube import YouTube
 from moviepy.audio.tools.cuts import find_audio_period
 from moviepy.video.fx import all as vfx
 
+import mltmaker
+
 
 @dataclass(order=True)
 class VidData:
@@ -29,102 +31,171 @@ class ClipInfo:
     duration: float
 
 
-def collage(files, bitrate, period=2.0, length=15.0, seed="amaze me", shuffle=False):
+class CollageMaker:
 
-    print("Loading...")
-    footage = []
-    offset = 0
-    for fn in files:
-        print("\r", fn, end="")
-        with VideoFileClip(fn, audio=False) as vid:
-            footage.append(VidData(offset, fn, vid.duration))
-        offset += vid.duration
-    footage_length = offset
-    print("\nDone")
+    def __init__(
+        self,
+        output,
+        files,
+        bitrate,
+        audio,
+        period=2.0,
+        length=15.0,
+        seed="amaze me",
+        shuffle=False,
+        flip=False,
+        preview=False,
+    ):
+        self.output = output
+        self.files = files
+        self.bitrate = bitrate
+        self.audio = audio
+        self.period = period
+        self.length = length
+        self.seed = seed
+        self.shuffle = shuffle
+        self.flip = flip
+        self.preview = preview
 
-    rand = random.Random(seed)
+    def load(self):
+        footage = []
+        offset = 0
+        for fn in self.files:
+            print("\r", fn, end="")
+            with VideoFileClip(fn, audio=False) as vid:
+                footage.append(VidData(offset, fn, vid.duration))
+            offset += vid.duration
 
-    subclips = []
-    starts = []
+        return footage, offset
 
-    def time_random():
-        """A random poke into the "timeline" of the footage.
+    def collage(self):
 
-        Favors long videos.  Results in clusters sometimes.
-        """
-        start = rand.uniform(0, footage_length - period)
-        vid = max(v for v in footage if v.start <= start)
-        return start, vid
+        print("Loading...")
+        footage, footage_length = self.load()
+        print("\nDone")
 
-    bag = footage[:]
-    def round_robin(bag):
-        """Pick videos from a bag and show random clips from them."""
-        if not bag:
-            bag += footage
-        vid = rand.choice(bag)
-        bag.remove(vid)
-        start = rand.uniform(vid.start, vid.start + vid.duration - period)
-        return start, vid
+        rand = random.Random(self.seed)
 
-    for i in range(int(length / period)):
-        while True:
-            # Random shots into the timeline result in weird clusters and in many clips
-            # not being used at all.  Let's try to combine poking a random poke into
-            # each clip with poking into the timeline.
-            start, vid = round_robin(bag) if bag else time_random()
-            vid_index = footage.index(vid)
-            skip = start - vid.start
-            # Make sure the clip does not span past the end of the clip
-            if skip + period <= vid.duration:
-                # Make sure clips don't overlap
-                distances = [abs(s - start) for s in starts]
-                if not distances or min(distances) > period * 2:
-                    break
-        starts.append(start)
-        subclips.append(ClipInfo(start, skip, vid.filename, period))
+        subclips = []
+        starts = []
 
-    if not shuffle:
-        subclips.sort()
+        def time_random():
+            """A random poke into the "timeline" of the footage.
 
-    print("Cutting")
-    clips = []
-    vids = []
-    batches = []
-    batch = 0
-    LIMIT = 20
+            Favors long videos.  Results in clusters sometimes.
+            """
+            start = rand.uniform(0, footage_length - self.period)
+            vid = max(v for v in footage if v.start <= start)
+            return start, vid
 
-    for clip in subclips:
-        print(f"Cutting {clip.filename} at {clip.skip}")
-        vid = VideoFileClip(clip.filename, audio=False)
-        vids.append(vid)
-        sub = vid.subclip(clip.skip, clip.skip + clip.duration)
-        clips.append(sub)
-        if len(clips) >= LIMIT or clip is subclips[-1]:
-            batchfile = f"temp{batch:04d}.mp4"
-            print(f"Writing {batchfile}", flush=True)
-            batchvid = concatenate_videoclips(clips)
-            batchvid.write_videofile(
-                batchfile,
-                fps=30,
-                bitrate=bitrate,
-                codec="libx264",
-                logger=None,
-            )
-            batches.append(batchfile)
-            batch += 1
-            clips = []
-            for vid in vids:
-                vid.close()
-            vids = []
+        bag = footage[:]
 
-    print("Concatenating")
-    def feed(subclips):
-        for fn in subclips:
-            print(fn, flush=True)
-            yield fn
-    cut = [VideoFileClip(clip, audio=False) for clip in feed(batches)]
-    total = concatenate_videoclips(cut)
-    return total
+        def round_robin(bag):
+            """Pick videos from a bag and show random clips from them."""
+            if not bag:
+                bag += footage
+            vid = rand.choice(bag)
+            bag.remove(vid)
+            start = rand.uniform(vid.start, vid.start + vid.duration - self.period)
+            return start, vid
+
+        for i in range(int(self.length / self.period)):
+            while True:
+                # Random shots into the timeline result in weird clusters and in many clips
+                # not being used at all.  Let's try to combine poking a random poke into
+                # each clip with poking into the timeline.
+                start, vid = round_robin(bag) if bag else time_random()
+                skip = start - vid.start
+                # Make sure the clip does not span past the end of the clip
+                if skip + self.period <= vid.duration:
+                    # Make sure clips don't overlap
+                    distances = [abs(s - start) for s in starts]
+                    if not distances or min(distances) > self.period * 2:
+                        break
+            starts.append(start)
+            subclips.append(ClipInfo(start, skip, vid.filename, self.period))
+
+        if not self.shuffle:
+            subclips.sort()
+
+        return self.write(subclips)
+
+    def write(self, subclips):
+        print("Cutting")
+        clips = []
+        vids = []
+        batches = []
+        batch = 0
+        LIMIT = 20
+
+        for clip in subclips:
+            print(f"Cutting {clip.filename} at {clip.skip}")
+            vid = VideoFileClip(clip.filename, audio=False)
+            vids.append(vid)
+            sub = vid.subclip(clip.skip, clip.skip + clip.duration)
+            if sub.w != 1920:
+                sub = sub.resize((1920, 1080))
+            clips.append(sub)
+            if len(clips) >= LIMIT or clip is subclips[-1]:
+                batchfile = f"temp{batch:04d}.mp4"
+                print(f"Writing {batchfile}", flush=True)
+                batchvid = concatenate_videoclips(clips, method="compose")
+                batchvid.write_videofile(
+                    batchfile,
+                    fps=30,
+                    bitrate=self.bitrate,
+                    codec="libx264",
+                    logger=None,
+                )
+                batches.append(batchfile)
+                batch += 1
+                clips = []
+                for vid in vids:
+                    vid.close()
+                vids = []
+
+        print("Concatenating")
+
+        def feed(subclips):
+            for fn in subclips:
+                print(fn, flush=True)
+                yield fn
+
+        cut = [VideoFileClip(clip, audio=False) for clip in feed(batches)]
+        result = concatenate_videoclips(cut)
+
+        result = result.set_audio(self.audio.subclip(0, self.length).audio_fadeout(2))
+        if self.flip:
+            print("Rotating")
+            result = result.fx(vfx.rotate, 180)
+        if self.preview:
+            result.preview(fps=10)
+            return
+        print("Writing")
+        result.write_videofile(
+            self.output, fps=30, bitrate=self.bitrate, codec="libx264"
+        )
+
+
+class MLTCollageMaker(CollageMaker):
+
+    def load(self):
+        footage = []
+        offset = 0
+        for fn in self.files:
+            print("\r", fn, end="")
+            vid = mltmaker.get_video_metadata(fn)
+            footage.append(VidData(offset, fn, vid["duration"]))
+            offset += vid["duration"]
+
+        return footage, offset
+
+    def write(self, subclips):
+        mltclips = []
+        for clip in subclips:
+            mltclips.append((os.path.basename(clip.filename), clip.skip, clip.duration))
+
+        mltmaker.generate_mlt_file(self.files, mltclips, self.output)
 
 
 def get_audio(youtube_id):
@@ -148,25 +219,25 @@ def run(options):
     print("Found audio period of {:.4f}".format(period))
     if options.length is None:
         options.length = audio.duration
-    result = collage(
+
+    if not options.shotcut:
+        collage_maker_class = CollageMaker
+    else:
+        collage_maker_class = MLTCollageMaker
+
+    clm = collage_maker_class(
+        options.output,
         options.videos,
         options.bitrate,
+        audio,
         period * options.multiplier,
         options.length,
         options.seed,
         shuffle=options.shuffle,
+        flip=options.flip,
+        preview=options.preview,
     )
-    result = result.set_audio(audio.subclip(0, options.length).audio_fadeout(2))
-    if options.flip:
-        print("Rotating")
-        result = result.fx(vfx.rotate, 180)
-    if options.preview:
-        result.preview(fps=10)
-        return
-    print("Writing")
-    result.write_videofile(
-        options.output, fps=30, bitrate=options.bitrate, codec="libx264"
-    )
+    clm.collage()
 
 
 def main():
@@ -191,6 +262,11 @@ def main():
     parser.add_argument("--flip", action="store_true", help="Rotate by 180 degrees")
     parser.add_argument(
         "--preview", action="store_true", help="Show video instead of rendering it."
+    )
+    parser.add_argument(
+        "--shotcut",
+        action="store_true",
+        help="Output Shotcut's MLT file rather than render video",
     )
     parser.add_argument("videos", nargs="+", help="Video files to process")
     options = parser.parse_args()
