@@ -388,17 +388,20 @@ def generate_mlt_file(video_files, clips, output_file="output.mlt"):
     )
 
     # Create chain elements for playlist clips
+    # Each clip gets its own chain, indexed by clip position (not filename)
     clip_chains = []
+    num_video_files = len(video_files)
     for j, (filename, start, duration) in enumerate(clips):
 
         chain = [ce for ce in chain_elements if ce["filename"].endswith(filename)][0]
 
-        # Create chain element for playlist
+        # Create chain element for playlist - unique ID per clip
+        chain_id = f"chain{num_video_files + j}"
         chain_playlist = ET.SubElement(
             mlt,
             "chain",
             {
-                "id": f"chain{i+j+1}",
+                "id": chain_id,
                 "out": time_to_timecode(video_metadata[chain["filename"]]["duration"]),
             },
         )
@@ -444,33 +447,25 @@ def generate_mlt_file(video_files, clips, output_file="output.mlt"):
             chain["filename"]
         )
 
-        clip_chains.append({"id": f"chain{i+j+1}", "filename": chain["filename"]})
+        # Store chain with clip index to maintain 1:1 mapping
+        clip_chains.append({"id": chain_id, "clip_index": j})
 
     # Create main playlist
     playlist = ET.SubElement(mlt, "playlist", {"id": "playlist0"})
     ET.SubElement(playlist, "property", {"name": "shotcut:video"}).text = "1"
     ET.SubElement(playlist, "property", {"name": "shotcut:name"}).text = "V1"
 
-    # Add clips to playlist
-    for filename, start_time, duration in clips:
+    # Add clips to playlist - use clip index for 1:1 chain mapping
+    for clip_index, (filename, start_time, duration) in enumerate(clips):
         if filename not in filename_to_path:
             print(f"Warning: {filename} not found in video_files, skipping")
             continue
 
-        # Find the chain for this filename
-        chain_id = None
-        for chain in clip_chains:
-            if chain["filename"] == filename:
-                chain_id = chain["id"]
-                break
-
-        if not chain_id:
-            print(f"Warning: Chain for {filename} not found, skipping")
-            continue
+        # Get the chain for this specific clip by index
+        chain_id = clip_chains[clip_index]["id"]
 
         # Convert times to timecode
         metadata = video_metadata[filename]
-        fps = metadata["frame_rate_num"] / metadata["frame_rate_den"]
         start_tc = time_to_timecode(start_time)
         end_tc = time_to_timecode(start_time + duration)
 
